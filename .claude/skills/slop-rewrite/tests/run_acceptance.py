@@ -800,6 +800,27 @@ def test_check_all_hint():
     print("PASS test_check_all_hint")
 
 
+def test_check_all_spaced_path():
+    """경로에 띄어쓰기가 있어도 하위 검사기에 한 인자로 넘어간다(2026-11-08 · 'D:/14. AI 에이전트/...' 에서
+    사전 검사가 「입력 오류: D:/14.」로 끊기던 것). 사전 검사·검수·HTML 검사 셋을 본다."""
+    with tempfile.TemporaryDirectory() as d:
+        sub = Path(d) / "공백 있는 폴더" / "02. 방침서 작성"
+        sub.mkdir(parents=True)
+        src = sub / "보고 초안.md"
+        src.write_text((ROOT / FIX / "ai-draft-report.md").read_text(encoding="utf-8"), encoding="utf-8")
+        r = run(ALL, "--guide", "없음", "--hint", str(src))
+        assert r.returncode == 0 and "입력 오류" not in r.stderr, r.stderr
+        assert r.stdout.rstrip("\n").splitlines()[-1].startswith("사전 검사: "), r.stdout
+        r = run(ALL, "--guide", "개조식", "--orig", str(src), str(src))
+        assert "입력 오류" not in r.stderr and r.stdout.rstrip("\n").splitlines()[-1].startswith("판정: "), r.stderr
+        html = sub / "보고 초안.html"
+        html.write_text("<html><body><p>□ 추진 배경</p><ul><li>ㅇ 대응 체계 마련 필요</li></ul></body></html>",
+                        encoding="utf-8")
+        r = run(".claude/skills/slop-rewrite/scripts/check_html.py", "--guide", "개조식", str(html))
+        assert "입력 오류" not in r.stderr and "No such file" not in r.stderr, r.stderr
+    print("PASS test_check_all_spaced_path")
+
+
 def test_check_all_hint_guide():
     """--hint 한 번이 가이드 고르기와 사전 검사를 함께 한다. 넷째 줄은 「가이드: <이름>」 또는 「가이드: 묻는다 · <이유>」,
     가이드가 정해졌으면 다섯째 줄이 그 가이드로 돌린 진단의 마지막 줄(사전 검사)이다. 물을 때는 넷째 줄에서 끝난다."""
@@ -1975,6 +1996,7 @@ if __name__ == "__main__":
     test_fidelity_footnotes()
     test_fidelity_negation_equivalents()
     test_check_all_hint()
+    test_check_all_spaced_path()
     test_check_all_hint_guide()
     test_check_all_bundle()
     test_skill_budget()

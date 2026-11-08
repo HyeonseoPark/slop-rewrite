@@ -59,11 +59,17 @@ def guide_names(bg: dict) -> list:
     return [k for k in bg if not k.startswith("_")]
 
 
-def run_cmd(template: str, **subs: str) -> subprocess.CompletedProcess:
-    cmd = template
+def fill_argv(template: str, **subs: str) -> list:
+    """명령 틀을 먼저 토큰으로 자른 뒤 자리표시자를 채운다.
+    값(파일 경로)에 띄어쓰기·역슬래시가 있어도 한 인자로 남는다."""
+    argv = shlex.split(template, posix=True)
     for k, v in subs.items():
-        cmd = cmd.replace("{" + k + "}", v)
-    argv = shlex.split(cmd, posix=True)
+        argv = [a.replace("{" + k + "}", v) for a in argv]
+    return argv
+
+
+def run_cmd(template: str, **subs: str) -> subprocess.CompletedProcess:
+    argv = fill_argv(template, **subs)
     if argv and argv[0] == "python":
         argv[0] = sys.executable
     r = subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", cwd=ROOT)

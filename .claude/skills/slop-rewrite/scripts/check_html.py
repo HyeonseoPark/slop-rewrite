@@ -74,7 +74,8 @@ def remap_lines(text: str, lines: dict) -> str:
 
 
 def run_check(cmd: str, md_path: Path, lines: dict | None = None) -> int:
-    argv = shlex.split(cmd.replace("{file}", md_path.as_posix()), posix=True)
+    # 틀을 먼저 자르고 경로를 넣는다 — 경로에 띄어쓰기가 있어도 한 인자로 남는다
+    argv = [a.replace("{file}", md_path.as_posix()) for a in shlex.split(cmd, posix=True)]
     if argv and argv[0] == "python":
         argv[0] = sys.executable
     r = subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", cwd=ROOT)
